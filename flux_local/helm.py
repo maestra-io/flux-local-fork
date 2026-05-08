@@ -50,7 +50,7 @@ import yaml
 
 from . import command
 from .context import trace_context, HELM_CACHE_DIR
-from .kustomize import Kustomize
+from .kustomize import Kustomize, Stash
 from .manifest import (
     HelmRelease,
     HelmRepository,
@@ -415,6 +415,18 @@ class Helm:
         """
         if options is None:
             options = Options()
+        # chartRef.kind=ExternalArtifact: chart is composed at runtime by an
+        # ArtifactGenerator (source.extensions.fluxcd.io) — no static chart to
+        # render offline. Return an empty Kustomize so downstream visitors get
+        # an empty document set instead of a HelmException.
+        if release.chart.repo_kind == EXTERNAL_ARTIFACT_KIND:
+            _LOGGER.info(
+                "Skipping helm template for HelmRelease %s/%s: chartRef.kind=ExternalArtifact "
+                "(chart is generated at runtime by ArtifactGenerator)",
+                release.namespace,
+                release.name,
+            )
+            return Kustomize([Stash(b"")])
         repo = next(
             iter([repo for repo in self._repos if repo.repo_name == release.repo_name]),
             None,
