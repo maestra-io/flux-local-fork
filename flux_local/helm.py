@@ -62,6 +62,7 @@ from .manifest import (
     HELM_CHART,
     GIT_REPOSITORY,
     OCI_REPOSITORY,
+    EXTERNAL_ARTIFACT_KIND,
     GitRepository,
 )
 from .source_controller.artifact import GitArtifact
@@ -385,7 +386,14 @@ class Helm:
         self,
         release: HelmRelease,
     ) -> bool:
-        """Check if the HelmRelease has an invalid GitRepository path."""
+        """Check if the HelmRelease references a chart that cannot be rendered locally.
+
+        Returns True for chartRef.kind=ExternalArtifact (the chart contents are
+        composed at runtime by an ArtifactGenerator and cannot be evaluated
+        offline) and for GitRepository charts whose path doesn't exist on disk.
+        """
+        if release.chart.repo_kind == EXTERNAL_ARTIFACT_KIND:
+            return True
         repo = next(
             iter([repo for repo in self._repos if repo.repo_name == release.repo_name]),
             None,

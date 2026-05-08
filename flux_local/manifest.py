@@ -54,6 +54,7 @@ HELM_CHART = "HelmChart"
 GIT_REPOSITORY = "GitRepository"
 HELM_REPOSITORY = "HelmRepository"
 OCI_REPOSITORY = "OCIRepository"
+EXTERNAL_ARTIFACT_KIND = "ExternalArtifact"
 KUSTOMIZE_KIND = "Kustomization"
 
 
