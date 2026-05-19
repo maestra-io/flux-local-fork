@@ -31,6 +31,20 @@ inputs:
   skip-invalid-kustomization-paths:
     description: When true, does not validate kustomization paths exist
     default: false
+  timeout:
+    description: >-
+      Optional per-attempt wall-clock cap for the flux-local run (GNU
+      `timeout` duration, e.g. "6m"). flux-local has no per-helm-pull
+      timeout, so an intermittently stalled chart/OCI pull otherwise hangs
+      until the job-level timeout. Empty (default) = no cap, unchanged.
+    default: ""
+  retries:
+    description: >-
+      Additional attempts if the flux-local run fails or times out.
+      "0" (default) = single attempt, unchanged. Use with `timeout` so a
+      transient pull stall fails fast and retries instead of consuming the
+      whole job budget.
+    default: "0"
 runs:
   using: "composite"
   steps:
@@ -58,16 +72,37 @@ runs:
         uv pip install -e ${{ github.action_path }}/../../
       shell: bash
     - name: Test cluster (flux-local)
-      run: |
-        flux-local \
-          --log-level ${{ inputs.debug != 'true' && 'INFO' || 'DEBUG' }} \
-          test \
-          --${{ inputs.enable-helm != 'true' && 'no-' || '' }}enable-helm \
-          --api-versions "${{ inputs.api-versions }}" \
-          --kustomize-build-flags="${{ inputs.kustomize-build-flags }}" \
-          --sources "${{ inputs.sources }}" \
-          --path ${{ inputs.path }} \
-          --verbosity ${{ inputs.debug != 'true' && '0' || '1' }} \
-          --registry-config "${{ inputs.registry-config }}" \
-          --${{ inputs.skip-invalid-kustomization-paths != 'true' && 'no-' || '' }}skip-invalid-kustomization-paths
       shell: bash
+      run: |
+        # Optional bounded-timeout + retry. Backward-compatible: with the
+        # defaults (timeout="" retries="0") TO_PREFIX is empty and the loop
+        # runs flux-local exactly once — identical to the prior behaviour.
+        TO_PREFIX=""
+        if [ -n "${{ inputs.timeout }}" ]; then
+          TO_PREFIX="timeout --signal=TERM --kill-after=30s ${{ inputs.timeout }}"
+        fi
+        attempts=$(( ${{ inputs.retries }} + 1 ))
+        n=1
+        while :; do
+          # shellcheck disable=SC2086  # TO_PREFIX intentionally word-splits
+          $TO_PREFIX flux-local \
+            --log-level ${{ inputs.debug != 'true' && 'INFO' || 'DEBUG' }} \
+            test \
+            --${{ inputs.enable-helm != 'true' && 'no-' || '' }}enable-helm \
+            --api-versions "${{ inputs.api-versions }}" \
+            --kustomize-build-flags="${{ inputs.kustomize-build-flags }}" \
+            --sources "${{ inputs.sources }}" \
+            --path ${{ inputs.path }} \
+            --verbosity ${{ inputs.debug != 'true' && '0' || '1' }} \
+            --registry-config "${{ inputs.registry-config }}" \
+            --${{ inputs.skip-invalid-kustomization-paths != 'true' && 'no-' || '' }}skip-invalid-kustomization-paths
+          rc=$?
+          [ $rc -eq 0 ] && break
+          if [ $n -ge $attempts ]; then
+            msg="rc=$rc"; [ $rc -eq 124 ] && msg="$msg (timed out after ${{ inputs.timeout }} — likely a stalled chart/OCI pull)"
+            echo "::error::flux-local test failed after $n attempt(s) ($msg)"
+            exit $rc
+          fi
+          echo "::warning::flux-local test attempt $n failed (rc=$rc); retrying ($((n+1))/$attempts)"
+          n=$((n+1))
+        done
