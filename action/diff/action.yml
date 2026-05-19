@@ -53,6 +53,20 @@ inputs:
   skip-invalid-kustomization-paths:
     description: When true, does not validate kustomization paths exist
     default: false
+  timeout:
+    description: >-
+      Optional per-attempt wall-clock cap for the flux-local run (GNU
+      `timeout` duration, e.g. "6m"). flux-local has no per-helm-pull
+      timeout, so an intermittently stalled chart/OCI pull otherwise hangs
+      until the job-level timeout. Empty (default) = no cap, unchanged.
+    default: ""
+  retries:
+    description: >-
+      Additional attempts if the flux-local run fails or times out.
+      "0" (default) = single attempt, unchanged. Use with `timeout` so a
+      transient pull stall fails fast and retries instead of consuming the
+      whole job budget.
+    default: "0"
 outputs:
   diff:
     description: Output of the diff command or empty if there is no diff
@@ -96,13 +110,25 @@ runs:
         token: ${{ inputs.token }}
     - name: Diff Resources
       id: flux_diff
+      shell: bash
       run: |
         if [[ "${{ inputs.resource }}" == "helmrelease" ]]; then
           extra_flags="--api-versions=${{ inputs.api-versions}} --registry-config=${{ inputs.registry-config }}"
         else
           extra_flags=""
         fi
-        flux-local \
+        # Optional bounded-timeout + retry. Backward-compatible: with the
+        # defaults (timeout="" retries="0") TO_PREFIX is empty and the loop
+        # runs flux-local exactly once — identical to the prior behaviour.
+        TO_PREFIX=""
+        if [ -n "${{ inputs.timeout }}" ]; then
+          TO_PREFIX="timeout --signal=TERM --kill-after=30s ${{ inputs.timeout }}"
+        fi
+        attempts=$(( ${{ inputs.retries }} + 1 ))
+        n=1
+        while :; do
+          # shellcheck disable=SC2086  # TO_PREFIX + extra_flags intentionally word-split
+          $TO_PREFIX flux-local \
             --log-level ${{ inputs.debug != 'true' && 'INFO' || 'DEBUG' }} \
             diff \
             ${{ inputs.resource }} \
@@ -119,7 +145,16 @@ runs:
             --sources "${{ inputs.sources }}" \
             --output-file diff.patch \
             ${extra_flags}
-      shell: bash
+          rc=$?
+          [ $rc -eq 0 ] && break
+          if [ $n -ge $attempts ]; then
+            msg="rc=$rc"; [ $rc -eq 124 ] && msg="$msg (timed out after ${{ inputs.timeout }} — likely a stalled chart/OCI pull)"
+            echo "::error::flux-local diff failed after $n attempt(s) ($msg)"
+            exit $rc
+          fi
+          echo "::warning::flux-local diff attempt $n failed (rc=$rc); retrying ($((n+1))/$attempts)"
+          n=$((n+1))
+        done
     - name: Generate Diff output
       id: flux_diff_output
       run: |
