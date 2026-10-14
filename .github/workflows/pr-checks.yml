@@ -1,3 +1,4 @@
+---
 # Secret scan of the PR's own commits on every pull request (the GitLab
 # gitleaks-validate MR job): maestra-io/github-actions pr-checks.yml, gitleaks only.
 # maestra-io/issues-maestra#1568
