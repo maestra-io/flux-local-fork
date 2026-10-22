@@ -27,9 +27,9 @@ jobs:
         - kustomization
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
     - name: Setup Flux CLI
-      uses: fluxcd/flux2/action@v2.7.5
+      uses: fluxcd/flux2/action@8454b02a32e48d775b9f563cb51fdcb1787b5b93 # v2.7.5
     - uses: ./action/diff
       id: diff
       with:
@@ -39,7 +39,7 @@ jobs:
         sources: cluster=tests/testdata/cluster3,flux-system,home-ops-kubernetes
         api-versions: batch/v1/CronJob
     - name: PR Comments
-      uses: mshick/add-pr-comment@v2
+      uses: mshick/add-pr-comment@b8f338c590a895d50bcbfa6c5859251edc8952fc # v2.8.2
       if: ${{ steps.diff.outputs.diff != '' }}
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
