@@ -4,6 +4,7 @@
     "config:recommended",
     "regexManagers:dockerfileVersions",
     "helpers:pinGitHubActionDigestsToSemver",
+    "github>maestra-io/renovate-config:externalImages",
   ],
   "timezone": "America/Los_Angeles",
   "assignees": ["allenporter"],
@@ -12,6 +13,7 @@
       "description": "Minor updates are automatic",
       "automerge": true,
       "automergeType": "branch",
+      "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["minor", "patch"]
     }
   ],
