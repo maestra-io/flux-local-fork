@@ -15,6 +15,13 @@ class GitError(Exception):
     """Exception raised for git operations."""
 
 
+def _checkout(repo: git.Repo, ref: str) -> None:
+    """Check out a manifest-supplied ref, refusing one git would parse as an option."""
+    if ref.startswith("-"):
+        raise GitError(f"Refusing to check out option-shaped ref: {ref!r}")
+    repo.git.checkout(ref)
+
+
 async def fetch_git(obj: GitRepository) -> GitArtifact:
     """Fetch a Git repository using the cache.
 
@@ -45,23 +52,23 @@ async def fetch_git(obj: GitRepository) -> GitArtifact:
         if obj.ref:
             if obj.ref.commit:
                 _LOGGER.info(f"Checking out commit {obj.ref.commit}")
-                repo.git.checkout(obj.ref.commit)
+                _checkout(repo, obj.ref.commit)
             elif obj.ref.tag:
                 _LOGGER.info(f"Checking out tag {obj.ref.tag}")
                 try:
                     # Try to check out the tag directly
-                    repo.git.checkout(obj.ref.tag)
+                    _checkout(repo, obj.ref.tag)
                 except git.exc.GitCommandError:
                     # If that fails, try to fetch the tag first
                     repo.git.fetch("--tags")
-                    repo.git.checkout(obj.ref.tag)
+                    _checkout(repo, obj.ref.tag)
             elif obj.ref.semver:
                 _LOGGER.info(f"Checking out semver {obj.ref.semver}")
                 # TODO: Implement semver tag filtering
                 raise NotImplementedError("Semver tag filtering not implemented")
             elif obj.ref.branch:
                 _LOGGER.info(f"Checking out branch {obj.ref.branch}")
-                repo.git.checkout(obj.ref.branch)
+                _checkout(repo, obj.ref.branch)
 
         # Return the artifact with the actual path and URL
         return GitArtifact(
@@ -70,6 +77,8 @@ async def fetch_git(obj: GitRepository) -> GitArtifact:
             ref=obj.ref,
         )
 
+    except GitError:
+        raise
     except git.exc.GitCommandError as e:
         raise GitError(f"Git operation failed: {e}") from e
     except Exception as e:
