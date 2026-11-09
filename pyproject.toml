@@ -27,6 +27,13 @@ dependencies = [
 [project.urls]
 Source = "https://github.com/allenporter/flux_local"
 
+# Python packages come from nora (packages.maestra.io), behind its 3-day quarantine
+# (issues-maestra#1649); credentials: UV_INDEX_MAESTRA_USERNAME/PASSWORD or the uv-nora action.
+[[tool.uv.index]]
+name = "maestra"
+url = "https://packages.maestra.io/simple/"
+default = true
+
 [tool.setuptools.packages.find]
 include = ["flux_local*"]
 

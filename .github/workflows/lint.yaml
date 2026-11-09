@@ -10,6 +10,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  id-token: write # packages.maestra.io (uv-nora)
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,6 +38,8 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "requirements_dev.txt"
           activate-environment: true
+      - name: Python packages through nora
+        uses: maestra-io/github-actions/uv-nora@67dad0867462692b62bf7e10d377b944ab68832f # v1.72.0
       - name: Install dependencies
         run: |
           uv pip install -r requirements_dev.txt
