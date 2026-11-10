@@ -9,6 +9,10 @@ on:
     branches:
     - main
 
+permissions:
+  contents: read
+  id-token: write # packages.maestra.io (uv-nora)
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,6 +30,8 @@ jobs:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
     - name: Setup Flux CLI
       uses: fluxcd/flux2/action@8454b02a32e48d775b9f563cb51fdcb1787b5b93 # v2.7.5
+    - name: Python packages through nora (the action installs flux-local with uv in this repo)
+      uses: maestra-io/github-actions/uv-nora@67dad0867462692b62bf7e10d377b944ab68832f # v1.72.0
     - uses: ./action/test
       with:
         enable-helm: true
