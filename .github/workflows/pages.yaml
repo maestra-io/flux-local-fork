@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   deploy:
+    # GitHub Pages is not enabled in this fork; the docs site belongs to upstream.
+    if: github.repository == 'allenporter/flux-local'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
