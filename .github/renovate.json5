@@ -2,7 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    "regexManagers:dockerfileVersions",
     "helpers:pinGitHubActionDigestsToSemver",
     "github>maestra-io/renovate-config:externalImages",
   ],
@@ -17,9 +16,18 @@
       "matchUpdateTypes": ["minor", "patch"]
     }
   ],
-  "regexManagers": [
+  "customManagers": [
     {
-      "fileMatch": [".+\\.yaml$"],
+      "description": "`_VERSION` variables in Dockerfiles: the built-in customManagers:dockerfileVersions, inlined so the supply-quarantine check reads every rule (issues-maestra#1649).",
+      "customType": "regex",
+      "managerFilePatterns": ["**/[Dd]ockerfile*", "**/[Cc]ontainerfile*", "**/*.[Dd]ockerfile*", "**/*.[Cc]ontainerfile*"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s(?:ENV|ARG)\\s+[A-Za-z0-9_]+?_VERSION[ =][\"']?(?<currentValue>.+?)[\"']?\\s"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/.+\\.yaml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?(?:_version|_VERSION)(?:=|: )(?<currentValue>.+?)\\s"
       ],
@@ -27,7 +35,7 @@
     }
   ],
   "pip_requirements": {
-    "fileMatch": ["requirements_dev.txt"]
+    "managerFilePatterns": ["/requirements_dev.txt/"]
   },
   "pre-commit": {"enabled": true}
 }
