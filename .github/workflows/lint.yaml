@@ -22,10 +22,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - uses: codespell-project/actions-codespell@8f01853be192eb0f849a5c7d721450e7a467c579 # v2
-        with:
-          check_hidden: false
-          exclude_file: ./tests/testdata/cluster9/clusters/dev/flux-system/gotk-components.yaml
       - name: Run yamllint
         uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3.1.1
         with:
@@ -40,6 +36,15 @@ jobs:
           activate-environment: true
       - name: Python packages through nora
         uses: maestra-io/github-actions/uv-nora@67dad0867462692b62bf7e10d377b944ab68832f # v1.72.0
+      # codespell-project/actions-codespell built a python image and pip-installed codespell from
+      # PyPI (issues-maestra#1649): codespell through nora, the CLI the action ran. Its entrypoint
+      # tests inputs for non-empty, so check_hidden: false meant --check-hidden. ./.venv (uv's, made
+      # by setup-uv above) did not exist when the action ran, before setup-uv.
+      - name: Codespell
+        run: |
+          uv pip install 'codespell[toml]==2.4.3'
+          codespell --count --check-hidden \
+            --exclude-file ./tests/testdata/cluster9/clusters/dev/flux-system/gotk-components.yaml --skip ./.git,./.venv
       - name: Install dependencies
         run: |
           uv pip install -r requirements_dev.txt
