@@ -38,12 +38,13 @@ jobs:
         uses: maestra-io/github-actions/uv-nora@67dad0867462692b62bf7e10d377b944ab68832f # v1.72.0
       # codespell-project/actions-codespell built a python image and pip-installed codespell from
       # PyPI (issues-maestra#1649): codespell through nora, the CLI the action ran. Its entrypoint
-      # tests inputs for non-empty, so check_hidden: false meant --check-hidden.
+      # tests inputs for non-empty, so check_hidden: false meant --check-hidden. ./.venv (uv's, made
+      # by setup-uv above) did not exist when the action ran, before setup-uv.
       - name: Codespell
         run: |
           uv pip install 'codespell[toml]==2.4.3'
           codespell --count --check-hidden \
-            --exclude-file ./tests/testdata/cluster9/clusters/dev/flux-system/gotk-components.yaml --skip ./.git
+            --exclude-file ./tests/testdata/cluster9/clusters/dev/flux-system/gotk-components.yaml --skip ./.git,./.venv
       - name: Install dependencies
         run: |
           uv pip install -r requirements_dev.txt
