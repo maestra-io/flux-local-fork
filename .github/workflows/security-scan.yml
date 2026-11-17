@@ -1,3 +1,4 @@
+---
 # Security scan (gitleaks, trivy, opengrep) through the reusable workflow of
 # maestra-io/github-actions. PR only, by Igor's decision 17.11.2026 (issues-maestra#1649): a PR
 # fails only on findings it introduces; no schedule. workflow_dispatch runs the full scan by hand.
@@ -10,7 +11,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # nora OIDC token for the scanner downloads
+  id-token: write  # nora OIDC token for the scanner downloads
 
 jobs:
   scan:
