@@ -26,8 +26,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - name: Setup Flux CLI
-        uses: fluxcd/flux2/action@8454b02a32e48d775b9f563cb51fdcb1787b5b93 # v2.7.5
+      # GitHub Releases through nora (packages.maestra.io): 3-day hold, issues-maestra#1649.
+      # Bump the version and the sha256 (the release's asset digest) together.
+      - name: Flux CLI through nora
+        uses: maestra-io/github-actions/nora-asset@bce883a9462ae1a0ec95b02ac797f223589ef7a5 # v1.115.0
+        with:
+          path: github/fluxcd/flux2/releases/download/v2.10.1/flux_2.10.1_linux_amd64.tar.gz
+          sha256: 967365ff84aabc97871827ff33713ef0c09f62dd83c18759e3a5e39adcea9285
+          bin: flux
+          member: flux
       # The helm-template snapshots match helm 3.x; the runner image's newer helm drops
       # `limits: null` and adds `port:`, so the Test job pins helm (red on main since 06.11).
       - name: Setup Helm
